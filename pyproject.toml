@@ -5,6 +5,9 @@ description = "Search huge time-sorted log files in milliseconds with binary sea
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+logseek = "logseek.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
