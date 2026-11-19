@@ -10,7 +10,7 @@ halving the range: a 5 GB file needs about 33 jumps instead of reading 5 GB.
 ## Roadmap
 
 - [x] 1. Log generator (realistic day of logs, any size)
-- [ ] 2. Core: binary search on bytes
+- [x] 2. Core: binary search on bytes (1 GB file: 30 jumps, 0.34 ms, 6.5 KB read vs 1.7 s / 468 MB linear)
 - [ ] 3. Query engine + CLI
 - [ ] 4. API + web page (jump animation, histogram)
 - [ ] 5. Benchmarks vs `grep` / linear scan
