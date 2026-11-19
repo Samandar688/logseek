@@ -21,16 +21,26 @@ async function api(path) {
 
 let info = null;
 let hourOffsets = []; // [{label, first}] from the day histogram, for strip ticks
+let lastHist = null; // last histogram data and search result, to redraw on resize
+let lastRes = null;
+
+// Charts are drawn in real screen pixels (viewBox = element width), so text stays
+// 11px on a phone instead of being shrunk with a fixed 1000-unit drawing.
+const widthOf = (el) => Math.max(280, Math.round(el.getBoundingClientRect().width));
 
 // ---- file strip ------------------------------------------------------------------
 
-const S = { left: 20, right: 980, top: 26, height: 44 };
+const S = { left: 20, right: 980, top: 26, height: 44 }; // right is set from the width
 const strip = d3.select("#strip");
 const xb = () => d3.scaleLinear().domain([0, info.size]).range([S.left, S.right]);
 let animation = 0; // bumps on every new search, so an old animation stops
 
 function drawStripBase() {
+  const W = widthOf(strip.node());
+  strip.attr("viewBox", `0 0 ${W} 118`);
+  S.right = W - 20;
   const x = xb();
+  const labelEvery = W < 640 ? 6 : 3; // hours between labels: fewer on a phone
   strip.selectAll("*").remove();
   strip.append("rect").attr("class", "strip-bg").attr("x", S.left).attr("y", S.top)
     .attr("width", S.right - S.left).attr("height", S.height).attr("rx", 4);
@@ -44,7 +54,7 @@ function drawStripBase() {
     const px = x(h.first);
     ticks.append("line").attr("class", "strip-tick").attr("x1", px).attr("x2", px)
       .attr("y1", S.top).attr("y2", S.top + S.height);
-    if (i % 3 === 0) {
+    if (i % labelEvery === 0) {
       ticks.append("text").attr("class", "strip-label").attr("x", px).attr("y", S.top + S.height + 16).text(h.label);
     }
   });
@@ -54,6 +64,7 @@ function drawStripBase() {
 }
 
 function animateSearch(res, target) {
+  lastRes = res;
   const run = ++animation;
   const x = xb();
   const probes = res.probes;
@@ -97,7 +108,7 @@ function showWindow(res, x) {
 
 // ---- histograms ------------------------------------------------------------------
 
-const H = { left: 44, right: 990, top: 8 };
+const H = { left: 44, right: 990, top: 8 }; // right is set from the width
 let histStack = []; // zoom history: [{start, end}]
 
 async function loadHistogram(start, end, buckets) {
@@ -111,12 +122,24 @@ async function loadHistogram(start, end, buckets) {
 
 function shortTime(stamp, spanMs) {
   const t = stamp.slice(11);
-  // spanMs = one bucket: label with as much detail as the bucket size needs
+  // spanMs = time between labels: show only the detail that changes between them
   return spanMs >= 60e3 ? t.slice(0, 5) : spanMs >= 1e3 ? t.slice(0, 8) : t;
 }
 
+// Label every n-th bar so labels fall on round times (every 3 h, not every 2.5 h).
+const NICE_MS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 14400, 21600, 28800, 43200]
+  .map((s) => s * 1000);
+function labelStep(count, spanMs, maxLabels) {
+  const needed = Math.ceil(count / maxLabels) * spanMs;
+  const nice = NICE_MS.find((ms) => ms >= needed && ms % spanMs === 0);
+  return nice ? nice / spanMs : Math.ceil(count / maxLabels);
+}
+
 function drawHistograms(data) {
+  lastHist = data;
   const rows = data.buckets;
+  const W = widthOf($("vol"));
+  H.right = W - 10;
   const spanMs = new Date(rows[0].end.replace(" ", "T")) - new Date(rows[0].start.replace(" ", "T"));
   $("hist-title").textContent = histStack.length
     ? `${data.start.slice(11, 19)} – ${data.end.slice(11, 19)} (${rows.length} buckets)`
@@ -124,10 +147,10 @@ function drawHistograms(data) {
   $("reset").hidden = !histStack.length;
 
   const x = d3.scaleBand().domain(d3.range(rows.length)).range([H.left, H.right]).paddingInner(0.12);
-  const every = Math.ceil(rows.length / 12);
+  const every = labelStep(rows.length, spanMs, Math.max(3, Math.min(12, Math.floor(W / 85)))); // ~85px per label
   const xAxis = (svg, h) => svg.append("g").attr("class", "axis").attr("transform", `translate(0,${h})`)
     .call(d3.axisBottom(x).tickValues(d3.range(0, rows.length, every))
-      .tickFormat((i) => shortTime(rows[i].start, spanMs)).tickSizeOuter(0));
+      .tickFormat((i) => shortTime(rows[i].start, every * spanMs)).tickSizeOuter(0));
 
   // MB for big buckets, KB for small ones (avoids "200m" = 0.2 MB on the axis)
   const useMB = d3.max(rows, (r) => r.bytes) >= 1024 ** 2;
@@ -139,13 +162,15 @@ function drawHistograms(data) {
   } else {
     const svg = d3.select("#err");
     svg.selectAll("*").remove();
-    svg.append("text").attr("class", "no-data").attr("x", 500).attr("y", 60).text("Window too big to count errors: zoom in");
+    svg.attr("viewBox", `0 0 ${W} 120`);
+    svg.append("text").attr("class", "no-data").attr("x", W / 2).attr("y", 60).text("Window too big to count errors: zoom in");
   }
 }
 
 function drawBars(sel, height, rows, x, value, cls, xAxis) {
   const svg = d3.select(sel);
   svg.selectAll("*").remove();
+  svg.attr("viewBox", `0 0 ${H.right + 10} ${height}`);
   const bottom = height - 22;
   const y = d3.scaleLinear().domain([0, d3.max(rows, value) || 1]).nice().range([bottom, H.top]);
   svg.append("g").attr("class", "axis").attr("transform", `translate(${H.left},0)`)
@@ -245,6 +270,24 @@ async function doSearch() {
 $("search").addEventListener("submit", (e) => { e.preventDefault(); doSearch(); });
 ["from", "to"].forEach((id) => $(id).addEventListener("input", () => { $("err-msg").textContent = ""; }));
 
+// ---- resize: redraw at the new width (only when the width really changed) ----------
+
+let drawnWidth = 0;
+let resizeTimer = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!info) return;
+    const w = widthOf($("vol"));
+    if (w === drawnWidth) return; // phones fire resize when the address bar hides
+    drawnWidth = w;
+    animation++; // stop a running animation; show its end state instead
+    drawStripBase();
+    if (lastRes) showWindow(lastRes, xb());
+    if (lastHist) drawHistograms(lastHist);
+  }, 150);
+});
+
 // ---- start -------------------------------------------------------------------------
 
 async function start() {
@@ -252,6 +295,7 @@ async function start() {
   $("file").textContent = `${info.file} · ${mb(info.size)} · ${info.day}`;
   const day = await api("/api/histogram?buckets=24&errors=false");
   hourOffsets = day.buckets.map((b) => ({ label: b.start.slice(11, 16), first: b.first }));
+  drawnWidth = widthOf($("vol"));
   drawStripBase();
   await loadHistogram(null, null, 96);
   $("level").value = "ERROR";

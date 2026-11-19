@@ -1,0 +1,9 @@
+# One-click deploy on Render (render.com -> New -> Blueprint -> pick this repo).
+# The Docker build generates a 100 MB demo log; the page serves it. Render sets $PORT.
+services:
+  - type: web
+    name: logseek
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/info
+    autoDeploy: true

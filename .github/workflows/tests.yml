@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev,bench]"
+      - run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (with a small demo log)
+        run: docker build --build-arg LOG_SIZE=5MB -t logseek .
+      - name: Start it and check the API answers
+        run: |
+          docker run -d -p 8000:8000 --name logseek logseek
+          for i in $(seq 1 30); do
+            curl -fs http://127.0.0.1:8000/api/info && break
+            sleep 1
+          done
+          curl -fs "http://127.0.0.1:8000/api/search?start=14:05&end=14:10&level=ERROR&limit=5" | head -c 300
+          docker logs logseek

@@ -1,5 +1,7 @@
 # logseek
 
+[![tests](https://github.com/Samandar688/logseek/actions/workflows/tests.yml/badge.svg)](https://github.com/Samandar688/logseek/actions/workflows/tests.yml)
+
 Find any time range in a **multi-gigabyte log file in milliseconds**, without reading the
 whole file and without loading it into memory.
 
@@ -14,7 +16,7 @@ halving the range: a 5 GB file needs about 33 jumps instead of reading 5 GB.
 - [x] 3. Query engine + CLI (stream the window, filter by level/service/text, hourly histogram)
 - [x] 4. API + web page (jump animation, volume + error histograms with zoom, search table)
 - [x] 5. Benchmarks vs `grep` / linear scan (5 GB: 34 ms vs 5.6 s, [results](bench/RESULTS.md))
-- [ ] 6. Docker, CI, deploy, README
+- [x] 6. Docker, CI, deploy, README
 
 ## Use it
 
@@ -55,6 +57,30 @@ logseek-web data/app.log --port 8000      # then open http://127.0.0.1:8000
 - **Whole day:** log volume per 15 minutes (binary search only) and errors per 15 minutes
   (a fast byte count). Incidents stand out; click a bar to zoom in and search it.
 - **Search:** time, level, service, text; results with the time each part took.
+
+## Run with Docker
+
+```bash
+docker build -t logseek .                  # bakes a 100 MB demo log into the image
+docker run -p 8000:8000 logseek            # open http://127.0.0.1:8000
+docker run -p 8000:8000 -v /path/to/your.log:/app/data/app.log logseek   # your own log
+```
+
+Smaller demo log: `docker build --build-arg LOG_SIZE=10MB -t logseek .`
+
+Deploy: `render.yaml` is a Render blueprint (free plan). The image already contains the
+demo log, so the free 0.1 CPU instance starts in seconds.
+
+## How it works
+
+| File | What it does |
+|---|---|
+| `logseek/generator.py` | Writes a realistic day of logs of any size, with 3 incidents (09:12, 14:05, 21:40) |
+| `logseek/search.py` | Binary search on byte offsets: `seek()`, skip to the next line, compare timestamps |
+| `logseek/query.py` | Streams only the found window in 1 MB chunks; filters; histograms from binary search |
+| `logseek/cli.py` | The `logseek` command |
+| `logseek/web.py`, `static/` | FastAPI + D3 page: jump animation, histograms with zoom, search |
+| `logseek/bench.py` | Benchmarks against a Python scan and `grep` |
 
 ## Run (dev)
 
