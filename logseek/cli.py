@@ -49,7 +49,7 @@ def print_histogram(log: LogFile, day: str) -> None:
     biggest = max(b.bytes for b in buckets) or 1
     for b in buckets:
         bar = "#" * round(40 * b.bytes / biggest)
-        print(f"{b.start[11:]}  {b.bytes / 1024**2:7.1f} MB  {bar}")
+        print(f"{b.start[11:16]}  {b.bytes / 1024**2:7.1f} MB  {bar}")
 
 
 def main(argv: list[str] | None = None) -> int:

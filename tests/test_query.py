@@ -138,6 +138,24 @@ def test_histogram_covers_the_file_and_shows_the_day_shape(big):
         assert by_hour["16"] > 2.5 * by_hour["04"]
 
 
+@pytest.mark.parametrize("chunk", [3, 8, 1 << 20])
+def test_count_in_range_matches_simple_count(big, chunk):
+    from logseek.query import count_in_range
+
+    data = open(big, "rb").read()
+    with LogFile(big) as log:
+        assert count_in_range(log, 0, log.size, chunk=chunk) == data.count(b" ERROR ")
+        assert count_in_range(log, 1000, 50_000, chunk=chunk) == data[1000:50_000].count(b" ERROR ")
+
+
+def test_scan_cap_cuts_window_at_whole_entry(big):
+    stats = QueryStats()
+    with LogFile(big) as log:
+        got = list(run(log, Query(max_scan_bytes=10_000), stats))
+        assert stats.truncated and 10_000 <= stats.last < 10_200
+        assert got[-1].text().endswith(got[-1].message)  # last entry is whole
+
+
 def test_histogram_needs_even_buckets(big):
     with LogFile(big) as log, pytest.raises(ValueError):
         histogram(log, "2026-11-19", minutes=7)

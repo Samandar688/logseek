@@ -32,6 +32,8 @@ class Probe:
     line_start: int  # start of the first timestamped line at or after pos
     timestamp: str | None  # that line's timestamp (None = end of file)
     went: str  # "left" or "right": which half we kept
+    lo: int = 0  # the search range [lo, hi) before this jump
+    hi: int = 0
 
 
 @dataclass
@@ -105,6 +107,7 @@ class LogFile:
         lo, hi = 0, self.size
         while lo < hi:
             mid = (lo + hi) // 2
+            range_before = (lo, hi)
             start, ts = self.next_entry(mid)
             if ts is not None and ts < key:
                 # This line is too early, and so is everything before it.
@@ -114,7 +117,7 @@ class LogFile:
                 # This line is late enough (or we hit the end): the answer is at or before it.
                 hi = mid
                 went = "left"
-            probes.append(Probe(mid, start, ts.decode() if ts else None, went))
+            probes.append(Probe(mid, start, ts.decode() if ts else None, went, *range_before))
 
         offset, _ = self.next_entry(lo)
         return SearchResult(offset=offset, probes=probes, bytes_read=self.bytes_read)

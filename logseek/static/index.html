@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>logseek</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>logseek</h1>
+    <span class="sub">binary search on a log file, byte by byte</span>
+    <span id="file" class="pill">loading…</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>The file, as bytes</h2>
+      <p class="hint">The whole file is one strip, left = first byte, right = last. Hour marks show where each hour starts: busy hours take more room. Watch the search jump.</p>
+      <svg id="strip" viewBox="0 0 1000 118" role="img" aria-label="File strip with binary search jumps"></svg>
+      <p id="jump-text" class="jump-text">&nbsp;</p>
+      <details>
+        <summary>All jumps</summary>
+        <ol id="jumps" class="jumps"></ol>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="row between">
+        <h2 id="hist-title">Whole day</h2>
+        <button id="reset" type="button" hidden>Back to whole day</button>
+      </div>
+      <p class="hint">Click a bar to zoom in and search that time.</p>
+      <div class="chart-wrap">
+        <div class="chart-label" id="vol-label">Log volume (MB)</div>
+        <svg id="vol" viewBox="0 0 1000 150" role="img" aria-label="Log volume per time bucket"></svg>
+        <div class="chart-label">Errors</div>
+        <svg id="err" viewBox="0 0 1000 120" role="img" aria-label="Errors per time bucket"></svg>
+        <div id="tip" class="tip" hidden></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Search</h2>
+      <form id="search" class="row wrap">
+        <label>From <input id="from" value="14:05" size="9" aria-label="From time"></label>
+        <label>To <input id="to" value="14:10" size="9" aria-label="To time"></label>
+        <label>Level
+          <select id="level">
+            <option value="">Any</option><option>ERROR</option><option>WARN</option>
+            <option>INFO</option><option>DEBUG</option>
+          </select>
+        </label>
+        <label>Service
+          <select id="service">
+            <option value="">Any</option><option>auth</option><option>payment</option>
+            <option>orders</option><option>search</option><option>gateway</option>
+          </select>
+        </label>
+        <label class="grow">Text <input id="grep" placeholder="e.g. timeout" maxlength="100"></label>
+        <button type="submit" class="primary">Search</button>
+      </form>
+      <p id="err-msg" class="msg err"></p>
+      <p id="stats" class="stats"></p>
+      <div class="table-wrap">
+        <table class="results">
+          <thead><tr><th>Time</th><th>Level</th><th>Service</th><th>Message</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
