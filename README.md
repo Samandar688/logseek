@@ -13,7 +13,7 @@ halving the range: a 5 GB file needs about 33 jumps instead of reading 5 GB.
 - [x] 2. Core: binary search on bytes (1 GB file: 30 jumps, 0.34 ms, 6.5 KB read vs 1.7 s / 468 MB linear)
 - [x] 3. Query engine + CLI (stream the window, filter by level/service/text, hourly histogram)
 - [x] 4. API + web page (jump animation, volume + error histograms with zoom, search table)
-- [ ] 5. Benchmarks vs `grep` / linear scan
+- [x] 5. Benchmarks vs `grep` / linear scan (5 GB: 34 ms vs 5.6 s, [results](bench/RESULTS.md))
 - [ ] 6. Docker, CI, deploy, README
 
 ## Use it
@@ -30,6 +30,20 @@ Matching lines go to stdout, a summary goes to stderr. On a 1 GB file:
 ```
 5,162 matches / 85,034 entries in window (5.7 MB of 1,020.7 MB) | binary search 60 jumps 0.28 ms | scan 111 ms
 ```
+
+### Benchmarks
+
+*How many ERROR lines between 14:05 and 14:10?* Same answer from all three methods:
+
+| File | logseek | Python scan | grep |
+|---|---|---|---|
+| 100 MB | 0.89 ms | 96 ms | 134 ms |
+| 1 GB | 6.1 ms | 979 ms | 1.1 s |
+| 5 GB | 34 ms | 4.9 s | 5.6 s |
+
+![Time to answer](bench/bench_time.png)
+
+Details and how to run them: [bench/RESULTS.md](bench/RESULTS.md).
 
 ### Web page
 

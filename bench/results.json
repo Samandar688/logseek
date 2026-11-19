@@ -1,0 +1,98 @@
+[
+  {
+    "method": "logseek",
+    "size": 10470824,
+    "seconds": 0.0005981000140309334,
+    "bytes_read": 313218,
+    "count": 3613,
+    "jumps": 47
+  },
+  {
+    "method": "python",
+    "size": 10470824,
+    "seconds": 0.01326520019210875,
+    "bytes_read": 5062523,
+    "count": 3613,
+    "jumps": 0
+  },
+  {
+    "method": "grep",
+    "size": 10470824,
+    "seconds": 0.03639709996059537,
+    "bytes_read": 10470824,
+    "count": 3613,
+    "jumps": 0
+  },
+  {
+    "method": "logseek",
+    "size": 104481105,
+    "seconds": 0.0008912000339478254,
+    "bytes_read": 813034,
+    "count": 3762,
+    "jumps": 51
+  },
+  {
+    "method": "python",
+    "size": 104481105,
+    "seconds": 0.096214700024575,
+    "bytes_read": 48637983,
+    "count": 3762,
+    "jumps": 0
+  },
+  {
+    "method": "grep",
+    "size": 104481105,
+    "seconds": 0.1344848999287933,
+    "bytes_read": 104481105,
+    "count": 3762,
+    "jumps": 0
+  },
+  {
+    "method": "logseek",
+    "size": 1069778303,
+    "seconds": 0.006056700134649873,
+    "bytes_read": 5940203,
+    "count": 5207,
+    "jumps": 59
+  },
+  {
+    "method": "python",
+    "size": 1069778303,
+    "seconds": 0.9790205999743193,
+    "bytes_read": 496013485,
+    "count": 5207,
+    "jumps": 0
+  },
+  {
+    "method": "grep",
+    "size": 1069778303,
+    "seconds": 1.1252266000956297,
+    "bytes_read": 1069778303,
+    "count": 5207,
+    "jumps": 0
+  },
+  {
+    "method": "logseek",
+    "size": 5348528564,
+    "seconds": 0.034464400028809905,
+    "bytes_read": 28656374,
+    "count": 11624,
+    "jumps": 65
+  },
+  {
+    "method": "python",
+    "size": 5348528564,
+    "seconds": 4.915145999984816,
+    "bytes_read": 2479127207,
+    "count": 11624,
+    "jumps": 0
+  },
+  {
+    "method": "grep",
+    "size": 5348528564,
+    "seconds": 5.56936000008136,
+    "bytes_read": 5348528564,
+    "count": 11624,
+    "jumps": 0
+  }
+]
