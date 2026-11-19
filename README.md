@@ -2,6 +2,8 @@
 
 [![tests](https://github.com/Samandar688/logseek/actions/workflows/tests.yml/badge.svg)](https://github.com/Samandar688/logseek/actions/workflows/tests.yml)
 
+**Live demo:** https://logseek.onrender.com (100 MB demo log; free plan, so the first visit after a quiet spell takes ~1 min to wake up)
+
 Find any time range in a **multi-gigabyte log file in milliseconds**, without reading the
 whole file and without loading it into memory.
 

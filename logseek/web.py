@@ -12,6 +12,7 @@ Endpoints (all read-only; the file path is fixed when the server starts):
 import argparse
 import os
 import pathlib
+import threading
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Annotated
@@ -37,7 +38,7 @@ MAX_SCAN_BYTES = 128 * 1024**2  # a search reads at most 128 MB of its window
 MAX_COUNT_BYTES = 4 * 1024**3  # error counts are skipped for windows bigger than 4 GB
 
 
-def create_app(path: str) -> FastAPI:
+def create_app(path: str, warm: bool = False) -> FastAPI:
     with LogFile(path) as log:
         day = first_day(log)
         info = {
@@ -76,6 +77,26 @@ def create_app(path: str) -> FastAPI:
             for r in rows
         ]
 
+    lock = threading.Lock()
+
+    def histogram_rows(start: str, end: str, buckets: int, errors: bool) -> list[dict]:
+        # One at a time: a second caller waits, then gets the cached result
+        # instead of counting the same bytes again on a small CPU.
+        with lock:
+            return cached_histogram(start, end, buckets, errors)
+
+    next_day = (datetime.fromisoformat(day) + timedelta(days=1)).strftime("%Y-%m-%d")
+    whole_day = (f"{day} 00:00", f"{next_day} 00:00")
+    if warm:
+        # The day view with error counts is the slow one (it reads the file).
+        # Compute it in the background at startup, so the first visitor
+        # does not wait for it on a free 0.1 CPU host.
+        def warm_up() -> None:
+            histogram_rows(*whole_day, 24, False)
+            histogram_rows(*whole_day, 96, True)
+
+        threading.Thread(target=warm_up, name="logseek-warm-up", daemon=True).start()
+
     @app.get("/api/info")
     def get_info() -> dict:
         return info
@@ -87,12 +108,11 @@ def create_app(path: str) -> FastAPI:
         buckets: Annotated[int, Param(ge=1, le=400)] = 96,
         errors: bool = True,
     ) -> dict:
-        next_day = (datetime.fromisoformat(day) + timedelta(days=1)).strftime("%Y-%m-%d")
-        s = to_stamp(start, f"{day} 00:00")
-        e = to_stamp(end, f"{next_day} 00:00")
+        s = to_stamp(start, whole_day[0])
+        e = to_stamp(end, whole_day[1])
         if to_datetime(e) <= to_datetime(s):
             raise HTTPException(status_code=422, detail="end must be after start")
-        return {"start": s, "end": e, "buckets": cached_histogram(s, e, buckets, errors)}
+        return {"start": s, "end": e, "buckets": histogram_rows(s, e, buckets, errors)}
 
     @app.get("/api/search")
     def get_search(
@@ -145,7 +165,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1", help="use 0.0.0.0 inside Docker")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
     args = parser.parse_args()
-    uvicorn.run(create_app(args.file), host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(create_app(args.file, warm=True), host=args.host, port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

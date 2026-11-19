@@ -80,3 +80,17 @@ def test_page_is_served(api):
     page = api.get("/")
     assert page.status_code == 200 and "<title>logseek</title>" in page.text
     assert api.get("/app.js").status_code == 200
+
+
+def test_warm_up_fills_the_day_histogram_cache(tmp_path):
+    import threading
+
+    path = tmp_path / "app.log"
+    generate(str(path), 1024**2, DAY, seed=3)
+    app = create_app(str(path), warm=True)
+    for t in threading.enumerate():
+        if t.name == "logseek-warm-up":
+            t.join(timeout=30)
+    with TestClient(app) as c:
+        rows = c.get("/api/histogram", params={"buckets": 96}).json()["buckets"]
+    assert len(rows) == 96 and all(r["errors"] is not None for r in rows)
