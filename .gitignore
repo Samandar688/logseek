@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.env
+# generated log files can be gigabytes: never commit them
+data/
+*.log
